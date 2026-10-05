@@ -5,6 +5,21 @@ permissions:
 jobs:
   php-and-integration:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: Root-test-pass-123
+          MYSQL_DATABASE: estate_wizard
+          MYSQL_USER: estate
+          MYSQL_PASSWORD: Wizard-database-pass-123
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -18,6 +33,10 @@ jobs:
         run: node --check assets/app.js
       - name: Backend integration and isolation
         run: python3 tests/integration.py
+      - name: Automatic MySQL installation wizard
+        env:
+          MYSQL_TEST: '1'
+        run: python3 tests/install_wizard.py
       - name: Package cPanel release
         run: zip -r estate-cpanel.zip index.php api.php install.php app assets storage .htaccess README.md -x app/config.php
       - uses: actions/upload-artifact@v4

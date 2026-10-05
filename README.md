@@ -8,11 +8,13 @@ A PHP 8.2+ / MySQL application with a responsive ivory-and-forest-green public w
 2. Extract the files into your domain's document root (for example `public_html/estate`). `index.php`, `api.php`, and `.htaccess` must be directly in that folder, not one folder deeper. Enable **Show hidden files** in File Manager and include `.htaccess` files.
 3. Select PHP 8.2 or 8.3 with extensions **PDO MySQL, mbstring, fileinfo, cURL**. Use HTTPS. MySQL 5.7+ / MariaDB 10.3+ is required.
 4. In cPanel's MySQL Database Wizard create a database and a user, and grant the user all privileges on that database. Use the full cPanel-prefixed names.
-5. Copy `app/config.example.php` to `app/config.php`. Fill in your database DSN/user/password, exact HTTPS `app_url` (including `/estate` if installed there), and a random `install_key` of at least 32 characters. Never commit this file or share credentials in chat.
-6. Set `storage_path` to a private directory outside `public_html` where possible and make it writable by PHP. Do not make it world writable. If using the included directory, Apache must honor its deny-all `.htaccess`.
-7. Visit `https://your-domain/estate/install.php`. Enter the installation key and create the administrator. There are no default credentials. The installer locks when an administrator exists; remove `install.php` after successful installation.
-8. Sign in, open **Website & settings**, enter your branding/brokerage and enable your profile. Add real authorized listings in **Properties**. Approve new agents under **Platform admin** after verification.
+5. Visit `https://your-domain/estate/install.php`. The new setup wizard detects your website address automatically.
+6. Enter your full cPanel database name, username and database password. Choose your admin name, email and password (at least 12 characters). Click **Install Estate automatically**.
+7. The wizard tests MySQL, creates the tables and admin account, generates the installation key, writes private `app/config.php`, prepares storage, and signs you in. No manual file copying, key generation or URL editing is required. Existing configuration is never overwritten and the installer locks after success. Remove `install.php` when finished.
+8. Open **Website & settings**, enter your branding/brokerage and enable your profile. Add authorized listings in **Properties**. Approve new agents under **Platform admin** after verification.
 9. Set the operator's legal identity, privacy contact, retention policy, and reviewed terms before accepting real customers. The default policy page clearly identifies these outstanding launch settings.
+
+The wizard cannot create a cPanel database/user without cPanel account access. Those are the only hosting resources you create manually. It supports local MySQL (`localhost` or `127.0.0.1`). For a custom host or advanced deployment, copy `app/config.example.php` to `app/config.php`, fill it privately, and use its installation key; that existing setup path is retained. Public installations require HTTPS. Storage is created outside the document root when allowed; if hosting restricts that location, the bundled protected `storage/` folder is used. Keep Apache `.htaccess` protection enabled.
 
 ### Application URLs
 - Public website: `index.php`
@@ -63,6 +65,7 @@ The handler pins Stripe API version 2024-06-20, verifies signatures and timestam
 find . -name '*.php' -not -path './storage/*' -print0 | xargs -0 -n1 php -l
 node --check assets/app.js
 python3 tests/integration.py
+python3 tests/install_wizard.py
 ```
 
 The integration suite copies the app to a temporary folder, uses a disposable SQLite database and PHP server on port 18766, and tests authentication, CSRF, cross-workspace read/write isolation, approvals, enquiries, team roles, suspension and logout. It never touches your configured production database. GitHub Actions runs the suite and packages a cPanel ZIP.
@@ -79,3 +82,5 @@ Back up the MySQL database, private storage, and private config together. Keep P
 - `assets/property-3.jpg`: https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde
 
 These illustrate the design only and do not depict verified listings at the sample locations/prices.
+
+The automatic-wizard CI test runs against a disposable MySQL 8 service. It verifies config generation, subfolder URL detection, automatic admin sign-in, installer locking, and prevention of existing-config overwrite. No production credentials are used.

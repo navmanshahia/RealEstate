@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-function config():array {static $c;return $c??=require __DIR__.'/config.php';}
+function config():array {static $c;return $c??=(defined('ESTATE_SETUP_CONFIG')?ESTATE_SETUP_CONFIG:require __DIR__.'/config.php');}
 function db():PDO {static $p;if(!$p){$c=config();$p=new PDO($c['dsn'],$c['db_user']??null,$c['db_pass']??null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);if(str_starts_with($c['dsn'],'sqlite:'))$p->exec('PRAGMA foreign_keys=ON');}return $p;}
 function query(string $sql,array $args=[]):PDOStatement{$s=db()->prepare($sql);$s->execute($args);return $s;}
 function uuid():string{return bin2hex(random_bytes(16));}
