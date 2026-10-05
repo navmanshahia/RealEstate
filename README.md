@@ -2,6 +2,16 @@
 
 A PHP 8.2+ / MySQL application with a responsive ivory-and-forest-green public website and private multi-workspace CRM. No Node server, Composer packages, build process, or WordPress required on cPanel.
 
+## Deploy with cPanel Git Version Control
+
+The repository includes `.cpanel.yml`. In **cPanel → Git Version Control → Manage → Pull or Deploy**, select the `main` branch, click **Update from Remote**, then **Deploy HEAD Commit**. Refresh the Manage screen after pulling if deployment controls have not appeared.
+
+The deployment target is `$HOME/public_html/Estate`, matching `https://elite-noir.com/Estate/` for the normal document-root layout. `scripts/deploy-cpanel.sh` uses an explicit application-file list and preserves `app/config.php`, uploads and database files. It never deploys `.git` or test files. If the repository itself is already in that document directory, the script recognizes it and completes without copying files onto themselves.
+
+The cPanel checkout must have a clean working tree. If **Update from Remote** reports local changes or a non-fast-forward error, preserve those changes and resolve the specific error before deploying; do not delete the database or private configuration. If your domain uses a different document root, adjust the script's target before deployment.
+
+After deployment, open `/Estate/install.php` for first-time setup, or your existing website if already installed. A GitHub push does not itself update cPanel: **Update from Remote → Deploy HEAD Commit** is the pull-deployment workflow.
+
 ## cPanel installation
 
 1. Download this repository's ZIP from GitHub (**Code → Download ZIP**) or download the `estate-cpanel` artifact from a successful Actions run.

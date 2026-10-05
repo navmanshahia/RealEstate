@@ -27,6 +27,8 @@ jobs:
           php-version: '8.3'
           extensions: pdo_sqlite, pdo_mysql, mbstring, fileinfo, curl
           coverage: none
+      - name: cPanel deployment preservation
+        run: python3 tests/deployment.py
       - name: PHP syntax
         run: find . -name '*.php' -not -path './storage/*' -print0 | xargs -0 -n1 php -l
       - name: JavaScript syntax
