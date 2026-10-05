@@ -1,0 +1,26 @@
+name: Validate Estate
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  php-and-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, pdo_mysql, mbstring, fileinfo, curl
+          coverage: none
+      - name: PHP syntax
+        run: find . -name '*.php' -not -path './storage/*' -print0 | xargs -0 -n1 php -l
+      - name: JavaScript syntax
+        run: node --check assets/app.js
+      - name: Backend integration and isolation
+        run: python3 tests/integration.py
+      - name: Package cPanel release
+        run: zip -r estate-cpanel.zip index.php api.php install.php app assets storage .htaccess README.md -x app/config.php
+      - uses: actions/upload-artifact@v4
+        with:
+          name: estate-cpanel
+          path: estate-cpanel.zip

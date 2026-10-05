@@ -1,0 +1,6 @@
+/app/config.php
+/storage/*
+!/storage/.htaccess
+*.zip
+node_modules/
+.env
