@@ -94,3 +94,15 @@ Back up the MySQL database, private storage, and private config together. Keep P
 These illustrate the design only and do not depict verified listings at the sample locations/prices.
 
 The automatic-wizard CI test runs against a disposable MySQL 8 service. It verifies config generation, subfolder URL detection, automatic admin sign-in, installer locking, and prevention of existing-config overwrite. No production credentials are used.
+
+
+## Recover administrator access without email
+
+From cPanel Terminal, inside the Git repository, run:
+
+```bash
+git pull --ff-only origin main
+php scripts/reset-admin.php "$HOME/public_html/Estate"
+```
+
+Use the live installation folder if its path differs. The CLI-only tool finds the existing administrator, generates a new random password, re-enables that admin login, invalidates previous sessions/reset tokens, and prints the email and password once in your terminal. It preserves all other users and application records. If there are multiple admins, it lists their emails without modifying anything; pass the intended admin email as the final argument. Sign in in a private window and change the generated password under Website & settings. No email service or web-accessible recovery endpoint is required.
