@@ -32,7 +32,7 @@ jobs:
       - name: PHP syntax
         run: find . -name '*.php' -not -path './storage/*' -print0 | xargs -0 -n1 php -l
       - name: JavaScript syntax
-        run: node --check assets/app.js && node --check assets/website.js
+        run: node --check assets/app.js
       - name: Backend integration and isolation
         run: python3 tests/integration.py
       - name: Automatic MySQL installation wizard
@@ -40,7 +40,7 @@ jobs:
           MYSQL_TEST: '1'
         run: python3 tests/install_wizard.py
       - name: Package cPanel release
-        run: zip -r estate-cpanel.zip index.php api.php install.php app assets storage .htaccess README.md -x app/config.php app/integrations.private.php
+        run: zip -r estate-cpanel.zip index.php api.php install.php app assets storage .htaccess README.md -x app/config.php
       - uses: actions/upload-artifact@v4
         with:
           name: estate-cpanel

@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
-function config():array {static $c;if($c===null){$c=defined('ESTATE_SETUP_CONFIG')?ESTATE_SETUP_CONFIG:require __DIR__.'/config.php';if(!defined('ESTATE_SETUP_CONFIG')&&is_file(__DIR__.'/integrations.private.php'))$c=array_replace($c,require __DIR__.'/integrations.private.php');}return $c;}
+function config():array {static $c;return $c??=(defined('ESTATE_SETUP_CONFIG')?ESTATE_SETUP_CONFIG:require __DIR__.'/config.php');}
 function db():PDO {static $p;if(!$p){$c=config();$p=new PDO($c['dsn'],$c['db_user']??null,$c['db_pass']??null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);if(str_starts_with($c['dsn'],'sqlite:'))$p->exec('PRAGMA foreign_keys=ON');}return $p;}
 function query(string $sql,array $args=[]):PDOStatement{$s=db()->prepare($sql);$s->execute($args);return $s;}
 function uuid():string{return bin2hex(random_bytes(16));}
 function now():string{return gmdate('Y-m-d H:i:s');}
 function fail(string $message,int $status=400):never{http_response_code($status);echo json_encode(['error'=>$message]);exit;}
 function respond(mixed $v):never{echo json_encode($v,JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE);exit;}
-function session_boot():void{session_name('estate_session');ini_set('session.use_strict_mode','1');session_set_cookie_params(['httponly'=>true,'secure'=>config()['session_secure']??true,'samesite'=>'Lax','path'=>rtrim(dirname($_SERVER['SCRIPT_NAME']??'/api.php'),'/').'/']);session_start();$_SESSION['csrf']??=bin2hex(random_bytes(32));if(isset($_SESSION['last'])&&time()-$_SESSION['last']>7200){unset($_SESSION['user']);session_regenerate_id(true);}$_SESSION['last']=time();}
+function session_boot():void{session_name('estate_session');ini_set('session.use_strict_mode','1');session_set_cookie_params(['httponly'=>true,'secure'=>config()['session_secure']??true,'samesite'=>'Lax','path'=>parse_url(config()['app_url'],PHP_URL_PATH)?:'/']);session_start();$_SESSION['csrf']??=bin2hex(random_bytes(32));if(isset($_SESSION['last'])&&time()-$_SESSION['last']>7200){unset($_SESSION['user']);session_regenerate_id(true);}$_SESSION['last']=time();}
 function csrf():void{if(!hash_equals($_SESSION['csrf'],$_SERVER['HTTP_X_CSRF_TOKEN']??''))fail('Your session changed. Refresh and try again.',419);}
 function body():array{$raw=file_get_contents('php://input');if(strlen($raw)>100000)fail('Request too large',413);$b=json_decode($raw,true);if(!is_array($b))fail('Invalid request');return $b;}
-function user(bool $required=true):?array{$u=isset($_SESSION['user'])?query('SELECT id,workspace,name,email,role,active,password FROM users WHERE id=?',[$_SESSION['user']])->fetch():false;if(!$u||!$u['active']||!hash_equals($_SESSION['version']??'',hash('sha256',$u['password']))){if($required)fail('Please sign in',401);return null;}unset($u['password']);if(function_exists('hostWorkspace')){$hw=hostWorkspace();if($hw&&$hw['id']!==$u['workspace']){if($required)fail('Sign in to this website’s workspace',403);return null;}}return $u;}
+function user(bool $required=true):?array{$u=isset($_SESSION['user'])?query('SELECT id,workspace,name,email,role,active,password FROM users WHERE id=?',[$_SESSION['user']])->fetch():false;if(!$u||!$u['active']||!hash_equals($_SESSION['version']??'',hash('sha256',$u['password']))){if($required)fail('Please sign in',401);return null;}unset($u['password']);return $u;}
 function admin():array{$u=user();if($u['role']!=='admin')fail('Administrator access required',403);return $u;}
 function member():array{$u=user();$w=query('SELECT * FROM workspaces WHERE id=?',[$u['workspace']])->fetch();if(!$w||$w['status']==='suspended')fail('Workspace is suspended',403);return $u;}
 function clean(mixed $s,int $max=200):string{return mb_substr(trim((string)$s),0,$max);}
