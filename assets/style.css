@@ -4,3 +4,15 @@
 .dashboardgrid>.panel,.dashboardgrid>.stack,.stack>.panel,.workmain,.metrics>.metric{min-width:0}.metric strong{font-size:clamp(22px,2.3vw,32px);overflow-wrap:anywhere}.panelhead h3{white-space:nowrap;font-size:23px}.panelhead .ghost{white-space:nowrap}.herocopy{max-width:850px}.sidebar{overflow-y:auto}.sidebar .brand{margin-bottom:30px}.sidebottom{padding-top:18px}.sidenav{gap:2px}.sidenav button{padding-top:10px;padding-bottom:10px}.sidebottom .mini{padding:14px}.sidebar{scrollbar-width:thin}
 @media(max-width:550px){.panelhead{flex-wrap:wrap;gap:8px}.panelhead h3{font-size:23px}.panelhead .ghost{padding:4px 0}.worktop .textlink{display:none}.hero h1{font-size:46px}.metrics .metric strong{font-size:23px}}
 @media(max-width:550px){.topnav{gap:8px}.topnav .brand{font-size:19px;letter-spacing:3px}.topnav .brand span{font-size:6px;letter-spacing:1px}.navright .ghost{padding:5px}.navright .btn{font-size:9px;padding:9px 8px}.topnav .navright{gap:3px}.topnav .brand{white-space:normal;max-width:185px}}
+/* Brand settings and DNS records fit small screens. */
+.settingsgrid > *, .stack > *, .agentcard {min-width:0}
+.domain-steps {padding-left:20px;font-size:13px;line-height:1.7}
+.domain-steps li {margin:16px 0}
+#connection-settings input[readonly] {font-size:12px;background:var(--bg,#f6f5f0)}
+#connection-settings .helper {overflow-wrap:anywhere}
+.agentcard .actions {flex-wrap:wrap}
+.agentcard h2 {overflow-wrap:anywhere}
+.topnav .brand {white-space:normal;overflow-wrap:anywhere;min-width:0;max-width:35%;letter-spacing:2px}
+.footer .brand {white-space:normal;overflow-wrap:anywhere;max-width:100%;letter-spacing:2px}
+.sidebar .brand {white-space:normal;overflow-wrap:anywhere;font-size:19px;letter-spacing:1px}
+@media(max-width:550px){.topnav .brand{max-width:48%;font-size:18px}.footer .brand{font-size:22px}}

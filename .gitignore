@@ -6,3 +6,7 @@ node_modules/
 .env
 
 /app/.install-lock
+
+/app/integrations.private.php
+/app/.integration-lock
+/app/.settings-*

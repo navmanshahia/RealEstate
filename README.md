@@ -6,7 +6,7 @@ A PHP 8.2+ / MySQL application with a responsive ivory-and-forest-green public w
 
 The repository includes `.cpanel.yml`. In **cPanel → Git Version Control → Manage → Pull or Deploy**, select the `main` branch, click **Update from Remote**, then **Deploy HEAD Commit**. Refresh the Manage screen after pulling if deployment controls have not appeared.
 
-The deployment target is `$HOME/public_html/Estate`, matching `https://elite-noir.com/Estate/` for the normal document-root layout. `scripts/deploy-cpanel.sh` uses an explicit application-file list and preserves `app/config.php`, uploads and database files. It never deploys `.git` or test files. If the repository itself is already in that document directory, the script recognizes it and completes without copying files onto themselves.
+The deployment target is `$HOME/public_html/Estate`, matching `https://elite-noir.com/Estate/` for the normal document-root layout. `scripts/deploy-cpanel.sh` uses an explicit application-file list and preserves `app/config.php`, `app/integrations.private.php`, uploads and database files. It never deploys `.git` or test files. If the repository itself is already in that document directory, the script recognizes it and completes without copying files onto themselves.
 
 The cPanel checkout must have a clean working tree. If **Update from Remote** reports local changes or a non-fast-forward error, preserve those changes and resolve the specific error before deploying; do not delete the database or private configuration. If your domain uses a different document root, adjust the script's target before deployment.
 
@@ -37,7 +37,7 @@ The wizard cannot create a cPanel database/user without cPanel account access. T
 
 - Email/password signup and login, password change, logout, optional emailed password reset.
 - Separate agent workspaces; server-scoped database operations. Team members intentionally share the same workspace. Owner-only settings and team controls; platform administrator approval/suspension.
-- Public listing search (location, property type, maximum price), property details/gallery, agent directory, agent profile websites, device-local favourites, seller introduction and enquiry forms.
+- Public listing search (location, property type, maximum price), property details/gallery, separate branded agent/agency websites, agency contact cards, device-local favourites, seller introduction and enquiry forms.
 - CRM contact and lead records, linked activities/tasks/deals/appointments, editable deal stages and drag-and-drop, commission fields, task completion, calendar `.ics` exports, draft campaigns, server-persisted property CRUD, private files, live calculated reports, CSV exports with spreadsheet formula escaping.
 - JPEG/PNG/WebP/PDF uploads (10 MB each, 500 MB workspace allowance). A stored image is public only when referenced by a published listing in an approved agent workspace.
 - Stripe subscription Checkout, Billing Portal and signed webhook handler. Disabled until configuration; no payment is simulated. Backend checks configured plans when `billing_required=true`.
@@ -47,7 +47,7 @@ The wizard cannot create a cPanel database/user without cPanel account access. T
 
 This is a working initial application, not an independently audited commercial SaaS. Test on your actual cPanel stack before launch. Included integration tests use SQLite for portability; production is intended for MySQL/MariaDB.
 
-- Agents get profile websites on the platform's domain. Wildcard subdomains, custom-domain mapping, full template editing, and a map search provider are **not implemented**.
+- Each workspace has a branded URL (`?site=WORKSPACE_SLUG`) and optional verified custom domain. No shared public agent directory is exposed. Full template editing, automatic cPanel domain provisioning, wildcard subdomains, and map search are **not implemented**.
 - MLS/IDX feeds, mailbox synchronization, SMS/calling, e-signatures, automated marketing sends, advanced workflow automation, CSV imports, and a buyer/seller private portal are **not connected/implemented**. Campaigns are clearly marked **drafts**; the inbox is a communication log.
 - Public search uses only agent-uploaded authorized listings. When no listings exist, the public site displays clearly marked design examples with illustrative prices. Demo contacts are loaded only in explicit demo mode and never seeded into the database.
 - Teams currently support a workspace owner plus members, maximum five total accounts. There is no granular per-record team assignment/permission matrix.
@@ -61,7 +61,7 @@ This is a working initial application, not an independently audited commercial S
 ## Stripe setup
 
 1. Create recurring monthly CAD prices for Starter, Professional and Team, matching the prices displayed in `assets/app.js` or update that copy.
-2. Put the Stripe secret key and the three price IDs in `app/config.php`.
+2. Sign in as the platform administrator, open **Website & settings → Stripe subscription billing**, and save the secret key and three price IDs. Keys stay blank on subsequent visits; blank preserves an existing secret. Settings are stored in a private server file, never returned by the API.
 3. Add webhook endpoint `https://your-domain/estate/api.php?action=stripe_webhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
 4. Set the webhook signing secret. Enable the Stripe customer portal for plan changes and cancellations. Test everything using test keys first.
 5. Set `billing_required=true` only after successful tests. A new workspace gets a 14-day trial; paid active/trialing workspaces can continue editing. Expired workspaces retain sign-in and read/export access; public listings are excluded. Starter supports contacts and properties; additional CRM record creation needs Professional/Team; adding team members requires Team. Existing higher-tier records remain readable/exportable.
@@ -94,3 +94,29 @@ Back up the MySQL database, private storage, and private config together. Keep P
 These illustrate the design only and do not depict verified listings at the sample locations/prices.
 
 The automatic-wizard CI test runs against a disposable MySQL 8 service. It verifies config generation, subfolder URL detection, automatic admin sign-in, installer locking, and prevention of existing-config overwrite. No production credentials are used.
+
+
+## Branded websites and connections
+
+After deployment, open **Website & settings**. Existing workspaces default to **Individual agent**. Choose **Agency / team** to publish up to 30 public contact cards. Each card has a name, role, bio, email, phone, and email/phone/both button preference. These cards are independent of CRM logins in **Team**. Only this workspace's published properties and contact cards are displayed. The signed-in account defaults to its own website; anonymous visitors must use a branded URL. The unscoped platform address promotes the service without listing subscriber businesses. Older `?agent=SLUG` URLs remain supported.
+
+### Custom domains
+
+1. The workspace owner saves a hostname in **Website & settings → Custom domain**.
+2. Add the displayed `_estate-verification.HOSTNAME` TXT record with its `estate=TOKEN` value at the authoritative DNS provider. Some DNS editors require only the label relative to the zone.
+3. Point an A record to the cPanel server IP. The platform hosting administrator must add the domain in cPanel with the **same document root as Estate**, normally `public_html/Estate`, and enable HTTPS/SSL. Do not create a separate application/database for the domain. Hosting plans may limit addon domains.
+4. Click **Verify DNS**, then open the HTTPS domain. Verification confirms ownership only; it does not provision hosting or prove the SSL certificate is installed.
+
+The verified hostname selects the workspace on the server and cannot be overridden by a different query-string slug. Unknown/pending hostnames cannot access the API; login on a custom hostname accepts only that workspace's users. Keep the verification record. Disconnect domains before transferring ownership. The new domain table is created automatically on the first API request; existing records remain unchanged. The database user needs CREATE privilege (already required by installation).
+
+### Platform billing and password-reset email
+
+Only a platform administrator can configure shared Stripe billing or password-reset email. Agency owners see service status and their own domain controls. Stripe collects the monthly workspace subscription; this is not Stripe Connect or property payment collection for individual agencies.
+
+In **Website & settings**, save Stripe test credentials, a webhook signing secret, and monthly CAD price IDs matching Starter $49, Professional $99, and Team $249. **Test connection** checks credentials and these prices. Test checkout, webhook delivery and the billing portal with a Stripe test account before using live keys or requiring payment. The test button does not simulate successful payment or verify webhook delivery.
+
+For password resets, set a real sender address and enable email, then **Send test to my email**. This uses hosting PHP `mail()`, not SMTP credentials. Configure SPF/DKIM in cPanel and confirm the message arrives; server acceptance alone does not prove delivery. If PHP mail is blocked, hosting must enable it. No email is sent automatically when you save settings.
+
+Runtime secrets are written atomically to `app/integrations.private.php` (0600, web access denied by `app/.htaccess`). This overrides the corresponding base config values, is excluded from Git/releases, and is preserved by deployment. Back it up privately along with `app/config.php`. The PHP process must have write permission to `app/` for saving integrations. Do not use `git clean -fdx` on a live installation.
+
+Validation covers anonymous and signed-in site isolation, agency-card persistence, denied non-admin integration access, secret masking/preservation, custom-host routing and account boundaries, and deployment preservation. Provider DNS, live Stripe checkout, actual email arrival and cPanel SSL must be verified with your own hosting/provider accounts.

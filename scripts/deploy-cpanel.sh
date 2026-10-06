@@ -18,8 +18,8 @@ estate_target="$(cd -- "$estate_target" && pwd -P)"
 # Explicit application allowlist. Never copy Git metadata, secrets, or runtime data.
 estate_files=(
   index.php api.php install.php .htaccess
-  app/core.php app/billing.php app/config.example.php app/.htaccess
-  assets/app.js assets/style.css assets/favicon.svg
+  app/websites.php app/core.php app/billing.php app/config.example.php app/.htaccess
+  assets/website.js assets/app.js assets/style.css assets/favicon.svg
   assets/hero.webp assets/property-1.jpg assets/property-2.jpg assets/property-3.jpg
   storage/.htaccess
 )
