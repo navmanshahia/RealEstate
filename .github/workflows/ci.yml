@@ -43,7 +43,9 @@ jobs:
       - name: Backend integration and isolation
         run: python3 tests/integration.py
       - name: Administrator terminal recovery
-        run: python3 tests/admin_recovery.py
+        run: |
+          python3 tests/sms_webhook.py
+          python3 tests/admin_recovery.py
       - name: Automatic MySQL installation wizard
         env:
           MYSQL_TEST: '1'
