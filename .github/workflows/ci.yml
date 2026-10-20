@@ -36,6 +36,8 @@ jobs:
           node --check assets/app.js
           node --check assets/features.js
           node --check assets/calendar-ui.js
+      - name: Listing metadata extraction
+        run: php tests/listing_metadata.php
       - name: Backend integration and isolation
         run: python3 tests/integration.py
       - name: Administrator terminal recovery
