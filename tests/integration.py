@@ -44,6 +44,7 @@ try:
  visitor=Client();visitor.session()
  assert visitor.request('client_register',{'workspace':wid,'name':'Property Buyer','email':'buyer@example.com','password':'Client-password-123'})[0]==200
  client_portal=visitor.request('client_portal');assert client_portal[0]==200 and client_portal[1]['client']['workspace']==wid,client_portal
+ assert client_portal[1]['client']['verified']==0 and client_portal[1]['enquiries']==[],client_portal
  assert visitor.request('client_favourite',{'id':pid})[1]['saved'] is True
  assert pid in visitor.request('client_portal')[1]['favourites']
  assert visitor.request('client_favourite',{'id':pid})[1]['saved'] is False
