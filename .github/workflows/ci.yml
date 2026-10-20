@@ -36,6 +36,7 @@ jobs:
           node --check assets/app.js
           node --check assets/features.js
           node --check assets/calendar-ui.js
+          node --check assets/mailbox-ui.js
       - name: Listing metadata extraction
         run: php tests/listing_metadata.php
       - name: Backend integration and isolation
