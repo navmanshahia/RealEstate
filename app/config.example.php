@@ -10,6 +10,8 @@ return [
  'twilio_sid'=>'','twilio_token'=>'','twilio_from'=>'',
  // Server-side address autocomplete provider.
  'geoapify_key'=>'',
+ // A Mailgun inbound route must POST here with signed timestamp/token/signature.
+ 'mailgun_webhook_signing_key'=>'',
  // Google and Microsoft calendar OAuth application credentials.
  'google_oauth_client_id'=>'','google_oauth_client_secret'=>'',
  'microsoft_oauth_client_id'=>'','microsoft_oauth_client_secret'=>'',
