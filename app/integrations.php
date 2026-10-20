@@ -169,7 +169,7 @@ function integration_post(string $action,array $b): void {
         $ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_TIMEOUT=>10,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_HTTPHEADER=>['Accept: text/html'],CURLOPT_USERAGENT=>'EstateListingPreview/1.0',CURLOPT_RESOLVE=>[$host.':443:'.$ip],CURLOPT_MAXFILESIZE=>700000]);
         $html=curl_exec($ch);$code=curl_getinfo($ch,CURLINFO_HTTP_CODE);$type=curl_getinfo($ch,CURLINFO_CONTENT_TYPE);curl_close($ch);
         $d=['name'=>'Imported listing (review details)','location'=>'','price'=>'','description'=>'','image'=>'','source_url'=>$url,'published'=>false];
-        if(is_string($html)&&strlen($html)<=700000&&$code===200&&str_contains(strtolower((string)$type),'text/html')){
+        if(class_exists('DOMDocument')&&is_string($html)&&strlen($html)<=700000&&$code===200&&str_contains(strtolower((string)$type),'text/html')){
             $doc=new DOMDocument();$prev=libxml_use_internal_errors(true);$doc->loadHTML($html,LIBXML_NONET|LIBXML_NOERROR|LIBXML_NOWARNING);libxml_clear_errors();libxml_use_internal_errors($prev);
             foreach($doc->getElementsByTagName('meta') as $meta){
                 $key=strtolower($meta->getAttribute('property')?:$meta->getAttribute('name'));$val=trim($meta->getAttribute('content'));
@@ -208,7 +208,7 @@ function integration_post(string $action,array $b): void {
             $url=rtrim(config()['app_url'],'/').'/api.php?action=unsubscribe&id='.$contact['id'].'&token='.campaign_optout_token($u['workspace'],$contact['id'],$recipient);
             $ok=mail_delivery($recipient,$subject,$message."\n\nTo unsubscribe: ".$url);
             if($previous)query('UPDATE campaign_deliveries SET status=?,created=? WHERE campaign_id=? AND contact_id=?',[$ok?'sent':'failed',now(),$r['id'],$contact['id']]);
-            else query('INSERT INTO campaign_deliveries (campaign_id,contact_id,status,created) VALUES (?,?,?,?,?)',[$r['id'],$contact['id'],$ok?'sent':'failed',now()]);
+            else query('INSERT INTO campaign_deliveries (campaign_id,contact_id,status,created) VALUES (?,?,?,?)',[$r['id'],$contact['id'],$ok?'sent':'failed',now()]);
             $ok?$sent++:$failed++;log_delivery($u['workspace'],'campaign',$recipient,$ok);
         }
         audit('campaign.send',$r['id']);respond(['sent'=>$sent,'failed'=>$failed,'previously_sent'=>$skipped,'limit'=>50]);
