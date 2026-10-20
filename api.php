@@ -6,6 +6,7 @@ require __DIR__.'/app/core.php';
 require __DIR__.'/app/integrations.php';
 require __DIR__.'/app/calendar.php';
 require __DIR__.'/app/inbound.php';
+require __DIR__.'/app/listing_metadata.php';
 try{
  $action=$_GET['action']??'session';
  if($action==='stripe_webhook'){require __DIR__.'/app/billing.php';webhook();}
