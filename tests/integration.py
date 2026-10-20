@@ -59,6 +59,11 @@ try:
  # Enquiry delivery is logged even without configured email transport.
  notifications=b.request('notification_status');assert notifications[0]==200 and any(x['kind']=='lead_email' for x in notifications[1]),notifications
  # External integrations must remain disabled safely without API credentials.
+ assert b.request('mailbox_status')[1]['connected']==[]
+ assert b.request('mailbox_start&provider=google')[0]==503
+ assert b.request('mailbox_sync',{'provider':'google'})[0]==409
+ assert b.request('mailbox_send',{'provider':'google','contact':rid,'subject':'Test','message':'Test'})[0]==409
+ assert c.request('mailbox_send',{'provider':'google','contact':rid,'subject':'Test','message':'Test'})[0]==404
  assert b.request('calendar_status')[1]['connected']==[]
  assert b.request('address_search&q=123%20Main%20Street')[0]==503
  assert b.request('import_listing',{'url':'http://127.0.0.1/private','authorized':True})[0]==400
