@@ -198,7 +198,7 @@ function mailbox_post(string $action,array $b): void {
         if(!$contact)fail('Contact not found',404);
         $data=json_decode($contact['data'],true)?:[];
         $to=email($data['email']??'');
-        $subject=clean($b['subject']??'',180);$message=clean($b['message']??'',8000);
+        $subject=str_replace(["\r","\n"],' ',clean($b['subject']??'',180));$message=clean($b['message']??'',8000);
         if(!$subject||!$message)fail('Subject and message required');
         mailbox_send_message($u['workspace'],$provider,$to,$subject,$message);
         saveRecord($u['workspace'],'activity',['name'=>$subject,'contact'=>$id,'type'=>'Email','date'=>gmdate('Y-m-d\TH:i'),'notes'=>'Sent to '.$to."\n\n".$message]);
