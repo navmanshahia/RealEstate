@@ -204,7 +204,9 @@ function integration_post(string $action,array $b): void {
                 if($key==='og:title'&&$val)$d['name']=clean($val,180);
                 if(in_array($key,['og:description','description'],true)&&$val)$d['description']=clean($val,3000);
                 if($key==='og:image'&&str_starts_with($val,'https://'))$d['image']=clean($val,1000);
+                if(in_array($key,['product:price:amount','og:price:amount'],true)&&preg_match('/^[0-9,.]+$/D',$val)&&is_numeric(str_replace(',','',$val)))$d['price']=(float)str_replace(',','',$val);
             }
+            listing_extract_fields($doc,$d);
         }
         respond(['data'=>$d,'note'=>'Preview only. Verify every field and your republishing rights before saving. Listing sites can block metadata extraction; use your licensed feed for reliable updates.']);
     }
