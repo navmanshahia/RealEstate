@@ -19,7 +19,7 @@ estate_target="$(cd -- "$estate_target" && pwd -P)"
 estate_files=(
   index.php api.php install.php .htaccess
   app/core.php app/billing.php app/integrations.php app/calendar.php app/config.example.php app/.htaccess
-  assets/app.js assets/features.js assets/style.css assets/features.css assets/favicon.svg
+  assets/app.js assets/features.js assets/calendar-ui.js assets/style.css assets/features.css assets/favicon.svg
   assets/hero.webp assets/property-1.jpg assets/property-2.jpg assets/property-3.jpg
   storage/.htaccess
 )
