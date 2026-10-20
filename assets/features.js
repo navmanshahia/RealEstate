@@ -128,7 +128,7 @@
   async function clientPortal(){
     const result=await api('client_portal');state.fav=result.favourites;
     const listings=state.public.properties.filter(p=>result.favourites.includes(p.id));
-    modal('Your client portal',`<p>Signed in as ${esc(result.client.name)} (${esc(result.client.email)})</p><h3>Saved homes</h3>${listings.map(p=>`<div class="listrow"><span>${esc(p.data.name)}</span><button class="outline small" data-act="property" data-id="${esc(p.id)}">View</button></div>`).join('')||'<p>No saved homes yet.</p>'}<h3>My enquiries</h3>${result.enquiries.map(e=>`<div class="listrow"><span>${esc(e.created)}</span><span class="tag">${esc(e.status)}</span></div>`).join('')||'<p>No enquiries yet.</p>'}`);
+    modal('Your client portal',`<p>Signed in as ${esc(result.client.name)} (${esc(result.client.email)})</p>${!result.client.verified?'<p class="helper">Please verify your email before your enquiry history can be displayed. <button class="outline small" data-upgrade="resend-client-verification">Resend verification email</button></p>':''}<h3>Saved homes</h3>${listings.map(p=>`<div class="listrow"><span>${esc(p.data.name)}</span><button class="outline small" data-act="property" data-id="${esc(p.id)}">View</button></div>`).join('')||'<p>No saved homes yet.</p>'}<h3>My enquiries</h3>${result.enquiries.map(e=>`<div class="listrow"><span>${esc(e.created)}</span><span class="tag">${esc(e.status)}</span></div>`).join('')||'<p>No enquiries yet.</p>'}`);
   }
   document.addEventListener('click',async e=>{
     const el=e.target.closest('[data-upgrade],[data-act=heart],[data-act=favourites]');
@@ -148,6 +148,7 @@
       }else if(action==='client-login'||action==='client-register')clientLogin(el.dataset.workspace||currentAgent()?.id,action==='client-register');
       else if(action==='client-logout'){await api('client_logout',{});state.client=null;state.fav=[];publicPage();toast('Signed out of client account');}
       else if(action==='client-portal')await clientPortal();
+      else if(action==='resend-client-verification'){await api('client_resend_verify',{});toast('Verification email requested');}
       else if(action==='import-listing'){
         modal('Import a property link',`<form id="listingimportform"><label>Source listing URL<input name="url" type="url" pattern="https://.*" placeholder="https://www.realtor.ca/..." required></label><label class="checkboxlabel"><input type="checkbox" name="authorized" value="1" required> I have permission to republish and modify the supplied listing information and photographs.</label><p class="helper">Supports previewing publicly available metadata from REALTOR.ca, RE/MAX, Royal LePage, Century 21 and Coldwell Banker URLs. Some sites block extraction, and their listing-feed/IDX terms still apply.</p><p class="error formmessage"></p><button>Preview listing</button></form>`);
       }else if(action==='verify-domain'){await api('domain_verify',{});await loadDomain();toast('Domain ownership verified. Configure DNS routing and SSL separately.');}
@@ -169,7 +170,7 @@
       if(f.id==='estateclientform'){
         await api(f.dataset.register==='1'?'client_register':'client_login',{...data,workspace:f.dataset.workspace});
         state.client=(await api('client_portal')).client;state.fav=(await api('client_portal')).favourites;
-        $('#modal').close();publicPage();toast('Client account ready');
+        $('#modal').close();publicPage();toast('Client account ready. Verify your email to see enquiry history.');
       }else if(f.id==='listingimportform'){
         const result=await api('import_listing',{...data,authorized:!!f.elements.authorized.checked});
         $('#modal').close();editor('property',null,result.data);toast(result.note);
