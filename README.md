@@ -37,7 +37,7 @@ The wizard cannot create a cPanel database/user without cPanel account access. T
 
 - Email/password signup and login, password change, logout, optional emailed password reset.
 - Separate agent workspaces; server-scoped database operations. Team members intentionally share the same workspace. Owner-only settings and team controls; platform administrator approval/suspension.
-- Public listing search (location, property type, maximum price), property details/gallery, agent directory, agent profile websites, device-local favourites, seller introduction and enquiry forms.
+- Public listing search (location, property type, maximum price), property details/gallery, agent directory, agent profile websites, client-account favourites (device-local fallback on general platform pages), seller introduction and enquiry forms.
 - CRM contact and lead records, linked activities/tasks/deals/appointments, editable deal stages and drag-and-drop, commission fields, task completion, calendar `.ics` exports, draft campaigns, server-persisted property CRUD, private files, live calculated reports, CSV exports with spreadsheet formula escaping.
 - JPEG/PNG/WebP/PDF uploads (10 MB each, 500 MB workspace allowance). A stored image is public only when referenced by a published listing in an approved agent workspace.
 - Stripe subscription Checkout, Billing Portal and signed webhook handler. Disabled until configuration; no payment is simulated. Backend checks configured plans when `billing_required=true`.
@@ -47,15 +47,15 @@ The wizard cannot create a cPanel database/user without cPanel account access. T
 
 This is a working initial application, not an independently audited commercial SaaS. Test on your actual cPanel stack before launch. Included integration tests use SQLite for portability; production is intended for MySQL/MariaDB.
 
-- Agents get profile websites on the platform's domain. Wildcard subdomains, custom-domain mapping, full template editing, and a map search provider are **not implemented**.
-- MLS/IDX feeds, mailbox synchronization, SMS/calling, e-signatures, automated marketing sends, advanced workflow automation, CSV imports, and a buyer/seller private portal are **not connected/implemented**. Campaigns are clearly marked **drafts**; the inbox is a communication log.
+- Agent sites now support workspace-only navigation, branding and TXT-verified custom-domain routing; the operator must configure the cPanel domain alias and HTTPS certificate. Wildcard subdomains and unrestricted HTML template editing are not implemented.
+- Licensed MLS/IDX listing feeds, Gmail/Outlook mailbox history synchronization, voice calling, e-signatures, complex automations and CSV contact imports remain unconnected. Listing URLs can be previewed into editable drafts; Mailgun inbound routes, outbound email, Twilio lead SMS, opt-in campaign sending and a per-agent client portal are available **only when configured**, as described below.
 - Public search uses only agent-uploaded authorized listings. When no listings exist, the public site displays clearly marked design examples with illustrative prices. Demo contacts are loaded only in explicit demo mode and never seeded into the database.
 - Teams currently support a workspace owner plus members, maximum five total accounts. There is no granular per-record team assignment/permission matrix.
 - Profile approval is performed manually by your administrator; signup does not verify a real estate licence automatically.
 - No conversion analytics or traffic numbers are invented. Reports calculate only existing CRM records.
-- Native PHP `mail()` must be enabled and tested for password reset delivery. Configure SPF/DKIM in cPanel. Production SMTP integration is a future extension. No bulk campaign delivery is provided.
+- Native PHP `mail()` must be enabled and tested for password reset, verification emails, direct messages and opt-in campaign batches. Configure SPF/DKIM/DMARC in cPanel. Managed SMTP/email-provider deliverability remains a production deployment responsibility.
 - Bundled Unsplash photography, an AI-generated hero, and Google Fonts are used for the design. Replace sample images with your own licensed property media; typography has local fallback fonts.
-- Calendar appointments use the agent's entered local time; ICS exports are floating local-time events. Cross-timezone scheduling and calendar OAuth sync are future work.
+- Calendar appointments can optionally synchronize through Google or Microsoft OAuth after owner authorization. Local CRM times use the workspace timezone (default America/Vancouver); single .ics exports are still offered. Provider-account connection, token refresh and cross-timezone behaviour require live-host verification.
 - Default business prices are proposed launch prices, not an assertion that billing is activated. Annual billing and automatic tax are not configured.
 
 ## Stripe setup
