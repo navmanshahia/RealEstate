@@ -32,7 +32,9 @@ jobs:
       - name: PHP syntax
         run: find . -name '*.php' -not -path './storage/*' -print0 | xargs -0 -n1 php -l
       - name: JavaScript syntax
-        run: node --check assets/app.js
+        run: |
+          node --check assets/app.js
+          node --check assets/features.js
       - name: Backend integration and isolation
         run: python3 tests/integration.py
       - name: Administrator terminal recovery
