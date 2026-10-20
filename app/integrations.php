@@ -5,15 +5,17 @@ declare(strict_types=1);
 function integration_schema(): void {
     static $checked = false;
     if ($checked) return;
-    try { query('SELECT id FROM client_accounts LIMIT 1'); query('SELECT domain FROM site_domains LIMIT 1'); query('SELECT id FROM notification_log LIMIT 1'); query('SELECT campaign_id FROM campaign_deliveries LIMIT 1'); $checked=true; return; }
+    try { query('SELECT verified FROM client_accounts LIMIT 1'); query('SELECT id FROM client_verifications LIMIT 1'); query('SELECT domain FROM site_domains LIMIT 1'); query('SELECT id FROM notification_log LIMIT 1'); query('SELECT campaign_id FROM campaign_deliveries LIMIT 1'); $checked=true; return; }
     catch (PDOException $e) { /* Existing installations can upgrade without reinstalling. */ }
     foreach ([
         'CREATE TABLE IF NOT EXISTS site_domains (domain VARCHAR(190) PRIMARY KEY,workspace VARCHAR(32) NOT NULL,token VARCHAR(64) NOT NULL,verified INTEGER NOT NULL DEFAULT 0,created VARCHAR(30) NOT NULL)',
-        'CREATE TABLE IF NOT EXISTS client_accounts (id VARCHAR(32) PRIMARY KEY,workspace VARCHAR(32) NOT NULL,email VARCHAR(254) NOT NULL,name VARCHAR(150) NOT NULL,password VARCHAR(255) NOT NULL,created VARCHAR(30) NOT NULL,UNIQUE (workspace,email))',
+        'CREATE TABLE IF NOT EXISTS client_accounts (id VARCHAR(32) PRIMARY KEY,workspace VARCHAR(32) NOT NULL,email VARCHAR(254) NOT NULL,name VARCHAR(150) NOT NULL,password VARCHAR(255) NOT NULL,verified INTEGER NOT NULL DEFAULT 0,created VARCHAR(30) NOT NULL,UNIQUE (workspace,email))',
+        'CREATE TABLE IF NOT EXISTS client_verifications (id VARCHAR(64) PRIMARY KEY,client_id VARCHAR(32) NOT NULL,expires VARCHAR(30) NOT NULL)',
         'CREATE TABLE IF NOT EXISTS client_favourites (client_id VARCHAR(32) NOT NULL,property_id VARCHAR(32) NOT NULL,PRIMARY KEY (client_id,property_id))',
         'CREATE TABLE IF NOT EXISTS notification_log (id VARCHAR(32) PRIMARY KEY,workspace VARCHAR(32) NOT NULL,kind VARCHAR(40) NOT NULL,destination VARCHAR(254) NOT NULL,status VARCHAR(20) NOT NULL,created VARCHAR(30) NOT NULL)',
         'CREATE TABLE IF NOT EXISTS campaign_deliveries (campaign_id VARCHAR(32) NOT NULL,contact_id VARCHAR(32) NOT NULL,status VARCHAR(20) NOT NULL,created VARCHAR(30) NOT NULL,PRIMARY KEY (campaign_id,contact_id))'
     ] as $sql) db()->exec($sql);
+    try { query('SELECT verified FROM client_accounts LIMIT 1'); } catch(PDOException $e) { db()->exec('ALTER TABLE client_accounts ADD COLUMN verified INTEGER NOT NULL DEFAULT 0'); }
     $checked = true;
 }
 function site_host(): string {
@@ -28,11 +30,21 @@ function site_scope(): ?string {
     integration_schema();
     return (string)(query('SELECT workspace FROM site_domains WHERE domain=? AND verified=1',[$host])->fetchColumn() ?: '');
 }
+function send_client_confirmation(array $client): bool {
+    if(empty(config()['mail_enabled']))return false;
+    $token=bin2hex(random_bytes(32));integration_schema();
+    query('DELETE FROM client_verifications WHERE client_id=?',[$client['id']]);
+    query('INSERT INTO client_verifications (id,client_id,expires) VALUES (?,?,?)',[hash('sha256',$token),$client['id'],gmdate('Y-m-d H:i:s',time()+86400)]);
+    $url=rtrim(config()['app_url'],'/').'/api.php?action=client_verify&token='.$token;
+    $sent=mail_delivery($client['email'],'Verify your Estate client account',"Verify your email before viewing your personal enquiry history:\n".$url."\n\nThis link expires in 24 hours.");
+    log_delivery($client['workspace'],'client_verify',$client['email'],$sent);
+    return $sent;
+}
 function client_logged_in(): ?array {
     $id = $_SESSION['client_id']??'';
     if (!$id) return null;
     integration_schema();
-    $client = query('SELECT id,workspace,name,email FROM client_accounts WHERE id=?',[$id])->fetch();
+    $client = query('SELECT id,workspace,name,email,verified FROM client_accounts WHERE id=?',[$id])->fetch();
     if (!$client || (site_scope()!==null && site_scope()!==$client['workspace'])) return null;
     return $client;
 }
@@ -79,12 +91,21 @@ function domain_name(string $input): string {
     return $domain;
 }
 function integration_get(string $action): void {
+    if($action==='client_verify'){
+        integration_schema();$token=(string)($_GET['token']??'');
+        if(!preg_match('/^[a-f0-9]{64}$/D',$token))fail('Invalid verification link',403);
+        $row=query('SELECT client_id FROM client_verifications WHERE id=? AND expires>?',[hash('sha256',$token),now()])->fetch();
+        if(!$row)fail('Verification link expired or already used',403);
+        query('UPDATE client_accounts SET verified=1 WHERE id=?',[$row['client_id']]);
+        query('DELETE FROM client_verifications WHERE client_id=?',[$row['client_id']]);
+        header('Content-Type: text/html; charset=UTF-8');echo '<!doctype html><title>Client account verified</title><p>Your email is verified. Return to your agent website and sign in to view your enquiries.</p>';exit;
+    }
     if ($action==='client_session') respond(['client'=>client_logged_in()]);
     if ($action==='client_portal') {
         $c=require_client();$rows=query('SELECT property_id FROM client_favourites WHERE client_id=?',[$c['id']])->fetchAll();
         $favs=array_values(array_filter(array_column($rows,'property_id'),fn($id)=>published_property($id,$c['workspace'])));
         $enquiries=[];
-        foreach(query("SELECT id,data,created FROM records WHERE workspace=? AND kind='contact' ORDER BY created DESC",[$c['workspace']])->fetchAll() as $row){
+        if(!empty($c['verified']))foreach(query("SELECT id,data,created FROM records WHERE workspace=? AND kind='contact' ORDER BY created DESC",[$c['workspace']])->fetchAll() as $row){
             $d=json_decode($row['data'],true)?:[];if(strtolower((string)($d['email']??''))===$c['email'] && ($d['source']??'')==='Website')$enquiries[]=['id'=>$row['id'],'created'=>$row['created'],'status'=>$d['status']??'New enquiry','property'=>$d['property']??''];
         }
         respond(['client'=>$c,'favourites'=>$favs,'enquiries'=>$enquiries]);
@@ -124,13 +145,20 @@ function integration_post(string $action,array $b): void {
             if(strlen($password)<12||strlen($password)>200)fail('Use a password between 12 and 200 characters');
             $name=clean($b['name']??'',150);if(strlen($name)<2)fail('Enter your name');
             if(query('SELECT id FROM client_accounts WHERE workspace=? AND email=?',[$workspace,$e])->fetch())fail('Account exists. Please sign in.');
-            $id=uuid();query('INSERT INTO client_accounts (id,workspace,email,name,password,created) VALUES (?,?,?,?,?,?)',[$id,$workspace,$e,$name,password_hash($password,PASSWORD_DEFAULT),now()]);
+            $id=uuid();query('INSERT INTO client_accounts (id,workspace,email,name,password,verified,created) VALUES (?,?,?,?,?,?,?)',[$id,$workspace,$e,$name,password_hash($password,PASSWORD_DEFAULT),0,now()]);send_client_confirmation(['id'=>$id,'workspace'=>$workspace,'email'=>$e]);
         } else {
             $c=query('SELECT * FROM client_accounts WHERE workspace=? AND email=?',[$workspace,$e])->fetch();
             if(!$c||!password_verify($password,$c['password']))fail('Incorrect email or password',401);
             $id=$c['id'];
         }
         session_regenerate_id(true);$_SESSION['client_id']=$id;respond(['ok'=>true]);
+    }
+    if($action==='client_resend_verify'){
+        $c=require_client();if(!empty($c['verified']))respond(['ok'=>true]);
+        rate('client_verify:'.$c['id'],3,3600);
+        if(empty(config()['mail_enabled']))fail('Email verification has not been configured',503);
+        if(!send_client_confirmation($c))fail('Verification email delivery failed',503);
+        respond(['ok'=>true]);
     }
     if($action==='client_logout'){unset($_SESSION['client_id']);respond(['ok'=>true]);}
     if($action==='client_favourite'){
