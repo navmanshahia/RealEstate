@@ -32,11 +32,20 @@ jobs:
       - name: PHP syntax
         run: find . -name '*.php' -not -path './storage/*' -print0 | xargs -0 -n1 php -l
       - name: JavaScript syntax
-        run: node --check assets/app.js
+        run: |
+          node --check assets/app.js
+          node --check assets/features.js
+          node --check assets/calendar-ui.js
+          node --check assets/mailbox-ui.js
+          node --check assets/sms-ui.js
+      - name: Listing metadata extraction
+        run: php tests/listing_metadata.php
       - name: Backend integration and isolation
         run: python3 tests/integration.py
       - name: Administrator terminal recovery
-        run: python3 tests/admin_recovery.py
+        run: |
+          python3 tests/sms_webhook.py
+          python3 tests/admin_recovery.py
       - name: Automatic MySQL installation wizard
         env:
           MYSQL_TEST: '1'

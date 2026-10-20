@@ -40,6 +40,52 @@ try:
  anon=Client();anon.session();s,d=anon.request('enquiry',{'workspace':wid,'property':pid,'name':'Buyer Test','email':'buyer@example.com','message':'A showing, please'});assert s==200,(s,d)
  assert any(r['data']['name']=='Buyer Test' for r in b.request('records')[1])
  assert not any(r['data']['name']=='Buyer Test' for r in c.request('records')[1])
+ # Multi-tenant client portal: signup, persisted favourites, and strict workspace isolation.
+ visitor=Client();visitor.session()
+ assert visitor.request('client_register',{'workspace':wid,'name':'Property Buyer','email':'buyer@example.com','password':'Client-password-123'})[0]==200
+ client_portal=visitor.request('client_portal');assert client_portal[0]==200 and client_portal[1]['client']['workspace']==wid,client_portal
+ assert client_portal[1]['client']['verified']==0 and client_portal[1]['enquiries']==[],client_portal
+ assert visitor.request('client_favourite',{'id':pid})[1]['saved'] is True
+ assert pid in visitor.request('client_portal')[1]['favourites']
+ assert visitor.request('client_favourite',{'id':pid})[1]['saved'] is False
+ assert not visitor.request('client_portal')[1]['favourites']
+ s,d=c.request('save',{'kind':'property','data':{'name':'Other agent home','published':True}})
+ assert s==200
+ assert visitor.request('client_favourite',{'id':d['id']})[0]==404
+ assert visitor.request('client_logout',{})[0]==200
+ assert visitor.request('client_portal')[0]==401
+ assert visitor.request('client_login',{'workspace':wid,'email':'buyer@example.com','password':'Client-password-123'})[0]==200
+ assert pid not in visitor.request('client_portal')[1]['favourites']
+ # Enquiry delivery is logged even without configured email transport.
+ notifications=b.request('notification_status');assert notifications[0]==200 and any(x['kind']=='lead_email' for x in notifications[1]),notifications
+ # External integrations must remain disabled safely without API credentials.
+ assert b.request('mailbox_status')[1]['connected']==[]
+ assert b.request('mailbox_start&provider=google')[0]==503
+ assert b.request('mailbox_sync',{'provider':'google'})[0]==409
+ assert b.request('mailbox_send',{'provider':'google','contact':rid,'subject':'Test','message':'Test'})[0]==409
+ assert c.request('mailbox_send',{'provider':'google','contact':rid,'subject':'Test','message':'Test'})[0]==404
+ # Customer SMS is account-scoped and always consent-gated.
+ assert b.request('sms_status')[1]['configured'] is False
+ assert b.request('sms_history&contact='+rid)==(200,[])
+ assert c.request('sms_history&contact='+rid)[0]==404
+ assert b.request('sms_send',{'contact':rid,'message':'Hello'})[0]==403
+ assert c.request('sms_send',{'contact':rid,'message':'Hello'})[0]==404
+ # Agents must document how permission was obtained before an SMS could ever be sent.
+ assert b.request('save',{'kind':'contact','id':rid,'data':{'name':'Private client','email':'client@example.com','phone':'6045550199','sms_consent':True}})[0]==400
+ assert b.request('save',{'kind':'contact','id':rid,'data':{'name':'Private client','email':'client@example.com','phone':'6045550199','sms_consent':True,'sms_consent_source':'Client signed consent form'}})[0]==200
+ assert b.request('sms_send',{'contact':rid,'message':'Hello client'})[0]==503
+ assert anon.request('sms_send',{'contact':rid,'message':'Hello'})[0]==401
+ assert anon.request('twilio_inbound',{'Body':'STOP'})[0] in (503,403)
+ assert b.request('calendar_status')[1]['connected']==[]
+ assert b.request('address_search&q=123%20Main%20Street')[0]==503
+ assert b.request('import_listing',{'url':'http://127.0.0.1/private','authorized':True})[0]==400
+ s,campaign=b.request('save',{'kind':'campaign','data':{'name':'Announcement','subject':'Test','notes':'Email draft'}});assert s==200
+ assert b.request('campaign_send',{'id':campaign['id']})[0]==503
+ assert b.request('domain_set',{'domain':'homes.example.com'})[0]==200
+ domains=b.request('domain_status');assert domains[0]==200 and domains[1][0]['verified']==0,domains
+ # Unverified custom host must not serve platform-wide agent listings.
+ req=urllib.request.Request(f'http://127.0.0.1:{PORT}/api.php?action=public',headers={'Host':'unverified.example.net'})
+ s=json.load(urllib.request.urlopen(req));assert not s['agents'] and not s['properties']
  assert b.request('team_add',{'name':'Colleague','email':'team@example.com','password':'Team-password-123'})[0]==200
  teammate=Client();teammate.session();assert teammate.request('login',{'email':'team@example.com','password':'Team-password-123'})[0]==200;teammate.session()
  assert any(r['id']==rid for r in teammate.request('records')[1])
