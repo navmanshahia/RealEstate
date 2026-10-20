@@ -64,6 +64,18 @@ try:
  assert b.request('mailbox_sync',{'provider':'google'})[0]==409
  assert b.request('mailbox_send',{'provider':'google','contact':rid,'subject':'Test','message':'Test'})[0]==409
  assert c.request('mailbox_send',{'provider':'google','contact':rid,'subject':'Test','message':'Test'})[0]==404
+ # Customer SMS is account-scoped and always consent-gated.
+ assert b.request('sms_status')[1]['configured'] is False
+ assert b.request('sms_history&contact='+rid)==(200,[])
+ assert c.request('sms_history&contact='+rid)[0]==404
+ assert b.request('sms_send',{'contact':rid,'message':'Hello'})[0]==403
+ assert c.request('sms_send',{'contact':rid,'message':'Hello'})[0]==404
+ # Agents must document how permission was obtained before an SMS could ever be sent.
+ assert b.request('save',{'kind':'contact','id':rid,'data':{'name':'Private client','email':'client@example.com','phone':'6045550199','sms_consent':True}})[0]==400
+ assert b.request('save',{'kind':'contact','id':rid,'data':{'name':'Private client','email':'client@example.com','phone':'6045550199','sms_consent':True,'sms_consent_source':'Client signed consent form'}})[0]==200
+ assert b.request('sms_send',{'contact':rid,'message':'Hello client'})[0]==503
+ assert anon.request('sms_send',{'contact':rid,'message':'Hello'})[0]==401
+ assert anon.request('twilio_inbound',{'Body':'STOP'})[0] in (503,403)
  assert b.request('calendar_status')[1]['connected']==[]
  assert b.request('address_search&q=123%20Main%20Street')[0]==503
  assert b.request('import_listing',{'url':'http://127.0.0.1/private','authorized':True})[0]==400
